@@ -36,6 +36,7 @@ public class Robot extends TimedRobot {
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
 
   private boolean aTrigger = false;
+  private boolean oldTrigger = true;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -98,47 +99,80 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
     boolean newTrigger = Joystick1.getTrigger();
     
-    if(newTrigger == true && oldTrigger)
+    if(newTrigger == true && oldTrigger == false){
+      aTrigger = true;
+    }
 
     NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
+    NetworkTableEntry tv = table.getEntry("tv");
     NetworkTableEntry tx = table.getEntry("tx");
     NetworkTableEntry ty = table.getEntry("ty");
     NetworkTableEntry ta = table.getEntry("ta");
 
+    double v = tv.getDouble(0.0);
     double x = tx.getDouble(0.0);
     double y = ty.getDouble(0.0);
-    double area = ta.getDouble(0.0);
+    double a = ta.getDouble(0.0);
 
      SmartDashboard.putNumber("LimelightX", x);
      SmartDashboard.putNumber("LimelightY", y);
-     SmartDashboard.putNumber("LimelightArea", area);
+     SmartDashboard.putNumber("LimelightArea", a);
+     SmartDashboard.putNumber("Sensitivity", (1 - Joystick1.getThrottle()));
 
-     double lrmultiply = (0.75 * Math.pow(x / 30, 1));
-     double lrms = 0.1;
+     double xsign;
 
-     if(Joystick1.getTrigger() == true && x < -5){
-       leftmotor1.set(-lrmultiply);
-       leftmotor2.set(-lrmultiply);
-       rightmotor1.set(-lrmultiply);
-       rightmotor2.set(-lrmultiply);
+     if(x < 0){
+      xsign = -1;
      }
-     else if(Joystick1.getTrigger() == true && (-5 < x && x < 0)){
-      leftmotor1.set(lrms);
-      leftmotor2.set(lrms);
-      rightmotor1.set(lrms);
-      rightmotor2.set(lrms);
+     else{
+      xsign = 1;
      }
-     else if(Joystick1.getTrigger() == true && (0 < x && x < 5)){
-      leftmotor1.set(-lrms);
-      leftmotor2.set(-lrms);
-      rightmotor1.set(-lrms);
-      rightmotor2.set(-lrms);
+
+     double lrmultiply = (-0.5 * Math.pow(x / 27, 1));
+     double lrms = 0.05 * xsign;
+     double spinspeed = 0.1;
+     double straightspeed = 0.1;
+     
+     if(Joystick2.getTrigger() == true){
+       leftmotor1.set(0);
+       leftmotor2.set(0);
+       rightmotor1.set(0);
+       rightmotor2.set(0);
+       aTrigger = false;
      }
-      else if(Joystick1.getTrigger() == true && x > 5){
-       leftmotor1.set(-lrmultiply);
-       leftmotor2.set(-lrmultiply);
-       rightmotor1.set(-lrmultiply);
-       rightmotor2.set(-lrmultiply);
+     else if(aTrigger == true && v == 0){
+      leftmotor1.set(spinspeed);
+      leftmotor2.set(spinspeed);
+      rightmotor1.set(spinspeed);
+      rightmotor2.set(spinspeed);
+     }
+     else if(aTrigger == true){
+      if(x < -5 || x > 5){
+        leftmotor1.set(lrmultiply);
+        leftmotor2.set(lrmultiply);
+        rightmotor1.set(lrmultiply);
+        rightmotor2.set(lrmultiply);
+      }
+      else if(-2 < x && x < 2){
+        if(a < 8){
+         leftmotor1.set(straightspeed);
+         leftmotor2.set(straightspeed);
+         rightmotor1.set(-straightspeed);
+         rightmotor2.set(-straightspeed);
+        }
+        else{
+         leftmotor1.set(-straightspeed);
+         leftmotor2.set(-straightspeed);
+         rightmotor1.set(straightspeed);
+         rightmotor2.set(straightspeed);
+        }
+      }
+      else{
+       leftmotor1.set(lrms);
+       leftmotor2.set(lrms);
+       rightmotor1.set(lrms);
+       rightmotor2.set(lrms);
+      }
      }
      else{
        leftmotor1.set((1-Joystick1.getThrottle()) * Joystick1.getY());
@@ -147,7 +181,7 @@ public class Robot extends TimedRobot {
        rightmotor2.set(-(1-Joystick1.getThrottle()) * Joystick2.getY());
      }
 
-     boolean oldTrigger = newTrigger;
+     oldTrigger = newTrigger;
   }
 
   /** This function is called once when the robot is disabled. */
